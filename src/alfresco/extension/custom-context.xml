@@ -9,5 +9,8 @@
 		<property name="searchService">
 			<ref bean="SearchService" />
 		</property>		
+		<property name="permissionService">
+			<ref bean="PermissionService" />
+		</property>
 	</bean>
 </beans>
