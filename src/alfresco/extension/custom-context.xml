@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE beans PUBLIC '-//SPRING//DTD BEAN//EN' 'http://www.springframework.org/dtd/spring-beans.dtd'>
+<beans>
+	<bean id="webscript.docsandfolders.get" class="alfresco.extension.de.WorkflowListWebScript"
+		parent="webscript">
+		<property name="nodeService">
+			<ref bean="NodeService" />
+		</property>
+		<property name="searchService">
+			<ref bean="SearchService" />
+		</property>		
+	</bean>
+</beans>

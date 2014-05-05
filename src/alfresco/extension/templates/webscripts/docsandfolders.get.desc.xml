@@ -1,0 +1,7 @@
+<webscript>
+	<shortname>Docs and Folders List</shortname>
+	<description>Get the list of all docs and folders</description>
+	<url>/docsandfolders</url>
+	<format default="json">extension</format>
+	<authentication>none</authentication>
+</webscript>
