@@ -1,9 +1,24 @@
 package alfresco.extension.de;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
 
+import org.alfresco.model.ContentModel;
 import org.alfresco.repo.security.authentication.AuthenticationUtil;
+import org.alfresco.service.cmr.dictionary.DictionaryService;
+import org.alfresco.service.cmr.repository.ChildAssociationRef;
+import org.alfresco.service.cmr.repository.ContentReader;
+import org.alfresco.service.cmr.repository.ContentService;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
 import org.alfresco.service.cmr.repository.StoreRef;
@@ -11,15 +26,37 @@ import org.alfresco.service.cmr.search.ResultSet;
 import org.alfresco.service.cmr.search.ResultSetRow;
 import org.alfresco.service.cmr.search.SearchService;
 import org.alfresco.service.cmr.security.PermissionService;
-import org.springframework.extensions.webscripts.DeclarativeWebScript;
-import org.springframework.extensions.webscripts.Status;
+import org.alfresco.service.namespace.QName;
+import org.alfresco.util.TempFileProvider;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.springframework.extensions.webscripts.AbstractWebScript;
 import org.springframework.extensions.webscripts.WebScriptRequest;
+import org.springframework.extensions.webscripts.WebScriptResponse;
 
-public class WorkflowListWebScript extends DeclarativeWebScript {
+public class WorkflowListWebScript extends AbstractWebScript {
 
 	private NodeService nodeService;
 	private SearchService searchService;
 	private PermissionService permissionService;
+	private DictionaryService dictionaryService;
+	private ContentService contentService;
+
+	private StoreRef storeRef = new StoreRef(StoreRef.PROTOCOL_WORKSPACE, "SpacesStore");
+	
+	private static final int BUFFER_SIZE = 1024;
+
+	private static final String MIMETYPE_ZIP = "application/zip";
+	private static final String TEMP_FILE_PREFIX = "alf";
+	private static final String ZIP_EXTENSION = ".zip";
+
+	public void setContentService(ContentService contentService) {
+		this.contentService = contentService;
+	}
+
+	public void setDictionaryService(DictionaryService dictionaryService) {
+		this.dictionaryService = dictionaryService;
+	}
 
 	public void setPermissionService(PermissionService permissionService) {
 		this.permissionService = permissionService;
@@ -38,29 +75,125 @@ public class WorkflowListWebScript extends DeclarativeWebScript {
 	}
 
 	@Override
-	protected Map<String, Object> executeImpl(WebScriptRequest request, Status status) {
+	public void execute(WebScriptRequest req, WebScriptResponse res) throws IOException {
 		AuthenticationUtil.setAdminUserAsFullyAuthenticatedUser();
-		StoreRef storeRef = new StoreRef(StoreRef.PROTOCOL_WORKSPACE, "SpacesStore");
-		ResultSet resultSet = searchService.query(storeRef, SearchService.LANGUAGE_LUCENE, 
-				"PATH:\"/app:company_home//*\" AND TYPE:\"cm:content\" AND @cm\\:name:\"Att1\"");
+		ResultSet resultSet = searchService.query(storeRef, SearchService.LANGUAGE_LUCENE,
+				"PATH:\"/app:company_home//*\" AND TYPE:\"cm:folder\"");
 
 		// folders 82
 		// content 187
 		// "PATH:\"/app:company_home//*\" AND TYPE:\"cm:content\" AND @cm\\:name:\"Att1\""
 		System.out.println("length: " + resultSet.length());
-		if (resultSet.length() < 20) {
-			for (ResultSetRow row : resultSet) {
-				//System.out.println(row.getNodeRef());
-			}
-		}
-		if (resultSet.length() > 0) {
-			NodeRef nr = resultSet.getNodeRef(0);
-			System.out.println("currnode: " + nr);
-			permissionService.getAllSetPermissions(nr);
+		List<NodeRef> list = new ArrayList<NodeRef>();
+		for (ResultSetRow row : resultSet) {
+			list.add(row.getNodeRef());
 		}
 		resultSet.close();
-		Map<String, Object> result = new LinkedHashMap<String, Object>();
-		return result;
+		String filename = "res";
+		try {
+			res.setContentType(MIMETYPE_ZIP);
+			res.setHeader("Content-Transfer-Encoding", "binary");
+			res.addHeader("Content-Disposition", "attachment;filename=\"" + filename/*unAccent(filename) */+ ZIP_EXTENSION + "\"");
+
+			res.setHeader("Cache-Control", "must-revalidate, post-check=0, pre-check=0");
+			res.setHeader("Pragma", "public");
+			res.setHeader("Expires", "0");
+
+			createZipFile(list, res.getOutputStream(), false/*new Boolean(noaccentStr)*/);
+		} catch (RuntimeException e) {
+			e.printStackTrace();
+		}		
+	}
+
+	public void createZipFile(List<NodeRef> nodeRefs, OutputStream os, boolean noaccent) throws IOException {
+		File zip = null;
+		try {
+			if (nodeRefs.size() > 0) {
+				zip = TempFileProvider.createTempFile(TEMP_FILE_PREFIX, ZIP_EXTENSION);
+				FileOutputStream stream = new FileOutputStream(zip);
+				BufferedOutputStream buff = new BufferedOutputStream(stream);
+				ZipArchiveOutputStream out = new ZipArchiveOutputStream(buff);
+				// out.setEncoding(encoding);
+				out.setMethod(ZipArchiveOutputStream.DEFLATED);
+				out.setLevel(Deflater.BEST_COMPRESSION);
+				try {
+					for (NodeRef nr : nodeRefs) {
+						addToZip(nr, out, noaccent, "");
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				} finally {
+					out.close();
+					buff.close();
+					stream.close();
+					if (nodeRefs.size() > 0) {
+						InputStream in = new FileInputStream(zip);
+						try {
+							byte[] buffer = new byte[BUFFER_SIZE];
+							int len;
+							while ((len = in.read(buffer)) > 0) {
+								os.write(buffer, 0, len);
+							}
+						} finally {
+							in.close();
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (zip != null) {
+				zip.delete();
+			}
+		}
+	}
+	
+	public void addToZip(NodeRef node, ZipArchiveOutputStream out, boolean noaccent, String path) throws IOException {
+		QName nodeQnameType = this.nodeService.getType(node);
+		String nodeName = (String) nodeService.getProperty(node, ContentModel.PROP_NAME);
+		if (dictionaryService.isSubClass(nodeQnameType, ContentModel.TYPE_CONTENT)) {
+			ContentReader reader = contentService.getReader(node, ContentModel.PROP_CONTENT);
+			if (reader != null) {
+				InputStream is = reader.getContentInputStream();
+				String filename = path.isEmpty() ? nodeName : path + '/' + nodeName;
+				ZipArchiveEntry entry = new ZipArchiveEntry(filename);
+				entry.setTime(((Date) nodeService.getProperty(node, ContentModel.PROP_MODIFIED)).getTime());
+				entry.setSize(reader.getSize());
+				out.putArchiveEntry(entry);
+				byte buffer[] = new byte[BUFFER_SIZE];
+				while (true) {
+					int nRead = is.read(buffer, 0, buffer.length);
+					if (nRead <= 0) {
+						break;
+					}
+					out.write(buffer, 0, nRead);
+				}
+				is.close();
+				out.closeArchiveEntry();
+			} else {
+				// ignore datalists: issue, todoList
+				// System.out.println("Unmanaged type, node = " + node + ", type = " + nodeService.getType(node));
+			}
+		} else if (this.dictionaryService.isSubClass(nodeQnameType, ContentModel.TYPE_FOLDER)
+				&& !this.dictionaryService.isSubClass(nodeQnameType, ContentModel.TYPE_SYSTEM_FOLDER)) {
+			List<ChildAssociationRef> children = nodeService.getChildAssocs(node);
+			if (children.isEmpty()) {
+				String folderPath = path.isEmpty() ? nodeName + '/' : path + '/' + nodeName + '/';
+				ZipEntry ze = new ZipEntry(folderPath);
+				ze.setMethod(ZipArchiveOutputStream.DEFLATED);
+				out.putArchiveEntry(new ZipArchiveEntry(ze));
+			} else {
+				for (ChildAssociationRef childAssoc : children) {
+					NodeRef childNodeRef = childAssoc.getChildRef();
+
+					addToZip(childNodeRef, out, noaccent, path.isEmpty() ? nodeName : path + '/' + nodeName);
+				}
+			}
+		} else {
+			// ignore system folders, actions 
+		  // System.out.println("Unmanaged type, node = " + node + ", type = " + nodeService.getType(node));
+		}
 	}
 
 }
