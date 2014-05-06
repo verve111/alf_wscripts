@@ -43,7 +43,7 @@ public class WorkflowListWebScript extends AbstractWebScript {
 	private ContentService contentService;
 
 	private StoreRef storeRef = new StoreRef(StoreRef.PROTOCOL_WORKSPACE, "SpacesStore");
-	
+
 	private static final int BUFFER_SIZE = 1024;
 
 	private static final String MIMETYPE_ZIP = "application/zip";
@@ -77,13 +77,7 @@ public class WorkflowListWebScript extends AbstractWebScript {
 	@Override
 	public void execute(WebScriptRequest req, WebScriptResponse res) throws IOException {
 		AuthenticationUtil.setAdminUserAsFullyAuthenticatedUser();
-		ResultSet resultSet = searchService.query(storeRef, SearchService.LANGUAGE_LUCENE,
-				"PATH:\"/app:company_home//*\" AND TYPE:\"cm:folder\"");
-
-		// folders 82
-		// content 187
-		// "PATH:\"/app:company_home//*\" AND TYPE:\"cm:content\" AND @cm\\:name:\"Att1\""
-		System.out.println("length: " + resultSet.length());
+		ResultSet resultSet = searchService.query(storeRef, SearchService.LANGUAGE_LUCENE, "PATH:\"/app:company_home/*\" AND TYPE:\"cm:folder\"");
 		List<NodeRef> list = new ArrayList<NodeRef>();
 		for (ResultSetRow row : resultSet) {
 			list.add(row.getNodeRef());
@@ -93,19 +87,17 @@ public class WorkflowListWebScript extends AbstractWebScript {
 		try {
 			res.setContentType(MIMETYPE_ZIP);
 			res.setHeader("Content-Transfer-Encoding", "binary");
-			res.addHeader("Content-Disposition", "attachment;filename=\"" + filename/*unAccent(filename) */+ ZIP_EXTENSION + "\"");
-
+			res.addHeader("Content-Disposition", "attachment;filename=\"" + filename + ZIP_EXTENSION + "\"");
 			res.setHeader("Cache-Control", "must-revalidate, post-check=0, pre-check=0");
 			res.setHeader("Pragma", "public");
 			res.setHeader("Expires", "0");
-
-			createZipFile(list, res.getOutputStream(), false/*new Boolean(noaccentStr)*/);
+			createZipFile(list, res.getOutputStream());
 		} catch (RuntimeException e) {
 			e.printStackTrace();
-		}		
+		}
 	}
 
-	public void createZipFile(List<NodeRef> nodeRefs, OutputStream os, boolean noaccent) throws IOException {
+	public void createZipFile(List<NodeRef> nodeRefs, OutputStream os) throws IOException {
 		File zip = null;
 		try {
 			if (nodeRefs.size() > 0) {
@@ -118,7 +110,7 @@ public class WorkflowListWebScript extends AbstractWebScript {
 				out.setLevel(Deflater.BEST_COMPRESSION);
 				try {
 					for (NodeRef nr : nodeRefs) {
-						addToZip(nr, out, noaccent, "");
+						addToZip(nr, out, "");
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -148,8 +140,8 @@ public class WorkflowListWebScript extends AbstractWebScript {
 			}
 		}
 	}
-	
-	public void addToZip(NodeRef node, ZipArchiveOutputStream out, boolean noaccent, String path) throws IOException {
+
+	public void addToZip(NodeRef node, ZipArchiveOutputStream out, String path) throws IOException {
 		QName nodeQnameType = this.nodeService.getType(node);
 		String nodeName = (String) nodeService.getProperty(node, ContentModel.PROP_NAME);
 		if (dictionaryService.isSubClass(nodeQnameType, ContentModel.TYPE_CONTENT)) {
@@ -173,7 +165,8 @@ public class WorkflowListWebScript extends AbstractWebScript {
 				out.closeArchiveEntry();
 			} else {
 				// ignore datalists: issue, todoList
-				// System.out.println("Unmanaged type, node = " + node + ", type = " + nodeService.getType(node));
+				// System.out.println("Unmanaged type, node = " + node + ", type = " +
+				// nodeService.getType(node));
 			}
 		} else if (this.dictionaryService.isSubClass(nodeQnameType, ContentModel.TYPE_FOLDER)
 				&& !this.dictionaryService.isSubClass(nodeQnameType, ContentModel.TYPE_SYSTEM_FOLDER)) {
@@ -187,12 +180,13 @@ public class WorkflowListWebScript extends AbstractWebScript {
 				for (ChildAssociationRef childAssoc : children) {
 					NodeRef childNodeRef = childAssoc.getChildRef();
 
-					addToZip(childNodeRef, out, noaccent, path.isEmpty() ? nodeName : path + '/' + nodeName);
+					addToZip(childNodeRef, out, path.isEmpty() ? nodeName : path + '/' + nodeName);
 				}
 			}
 		} else {
-			// ignore system folders, actions 
-		  // System.out.println("Unmanaged type, node = " + node + ", type = " + nodeService.getType(node));
+			// ignore system folders, actions
+			// System.out.println("Unmanaged type, node = " + node + ", type = " +
+			// nodeService.getType(node));
 		}
 	}
 
