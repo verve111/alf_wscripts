@@ -1,0 +1,6 @@
+<webscript>
+  <shortname>File Unzip</shortname>
+  <description>Unzips Docs and Folders into Repository</description>
+  <url>/unzip</url>
+  <authentication>none</authentication>
+</webscript>

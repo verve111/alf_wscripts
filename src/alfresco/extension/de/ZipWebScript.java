@@ -34,7 +34,7 @@ import org.springframework.extensions.webscripts.AbstractWebScript;
 import org.springframework.extensions.webscripts.WebScriptRequest;
 import org.springframework.extensions.webscripts.WebScriptResponse;
 
-public class WorkflowListWebScript extends AbstractWebScript {
+public class ZipWebScript extends AbstractWebScript {
 
 	private NodeService nodeService;
 	private SearchService searchService;
@@ -70,7 +70,7 @@ public class WorkflowListWebScript extends AbstractWebScript {
 		this.searchService = searchService;
 	}
 
-	public WorkflowListWebScript() {
+	public ZipWebScript() {
 		super();
 	}
 
@@ -107,7 +107,7 @@ public class WorkflowListWebScript extends AbstractWebScript {
 				ZipArchiveOutputStream out = new ZipArchiveOutputStream(buff);
 				// out.setEncoding(encoding);
 				out.setMethod(ZipArchiveOutputStream.DEFLATED);
-				out.setLevel(Deflater.BEST_COMPRESSION);
+				out.setLevel(Deflater.DEFLATED);
 				try {
 					for (NodeRef nr : nodeRefs) {
 						addToZip(nr, out, "");
@@ -115,7 +115,11 @@ public class WorkflowListWebScript extends AbstractWebScript {
 				} catch (Exception e) {
 					e.printStackTrace();
 				} finally {
-					out.close();
+					try {
+						out.close();
+					} catch (IOException e) {
+						System.out.println("ss");
+					}
 					buff.close();
 					stream.close();
 					if (nodeRefs.size() > 0) {
@@ -149,6 +153,7 @@ public class WorkflowListWebScript extends AbstractWebScript {
 			if (reader != null) {
 				InputStream is = reader.getContentInputStream();
 				String filename = path.isEmpty() ? nodeName : path + '/' + nodeName;
+				System.out.println(filename);
 				ZipArchiveEntry entry = new ZipArchiveEntry(filename);
 				entry.setTime(((Date) nodeService.getProperty(node, ContentModel.PROP_MODIFIED)).getTime());
 				entry.setSize(reader.getSize());
@@ -176,10 +181,10 @@ public class WorkflowListWebScript extends AbstractWebScript {
 				ZipEntry ze = new ZipEntry(folderPath);
 				ze.setMethod(ZipArchiveOutputStream.DEFLATED);
 				out.putArchiveEntry(new ZipArchiveEntry(ze));
+				System.out.println(folderPath);
 			} else {
 				for (ChildAssociationRef childAssoc : children) {
 					NodeRef childNodeRef = childAssoc.getChildRef();
-
 					addToZip(childNodeRef, out, path.isEmpty() ? nodeName : path + '/' + nodeName);
 				}
 			}
