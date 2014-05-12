@@ -115,11 +115,7 @@ public class ZipWebScript extends AbstractWebScript {
 				} catch (Exception e) {
 					e.printStackTrace();
 				} finally {
-					try {
-						out.close();
-					} catch (IOException e) {
-						System.out.println("ss");
-					}
+					out.close();
 					buff.close();
 					stream.close();
 					if (nodeRefs.size() > 0) {
@@ -153,7 +149,6 @@ public class ZipWebScript extends AbstractWebScript {
 			if (reader != null) {
 				InputStream is = reader.getContentInputStream();
 				String filename = path.isEmpty() ? nodeName : path + '/' + nodeName;
-				System.out.println(filename);
 				ZipArchiveEntry entry = new ZipArchiveEntry(filename);
 				entry.setTime(((Date) nodeService.getProperty(node, ContentModel.PROP_MODIFIED)).getTime());
 				entry.setSize(reader.getSize());
@@ -181,7 +176,7 @@ public class ZipWebScript extends AbstractWebScript {
 				ZipEntry ze = new ZipEntry(folderPath);
 				ze.setMethod(ZipArchiveOutputStream.DEFLATED);
 				out.putArchiveEntry(new ZipArchiveEntry(ze));
-				System.out.println(folderPath);
+				out.closeArchiveEntry();
 			} else {
 				for (ChildAssociationRef childAssoc : children) {
 					NodeRef childNodeRef = childAssoc.getChildRef();
