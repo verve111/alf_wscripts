@@ -3,5 +3,5 @@
 	<description>Get the list of all docs and folders</description>
 	<url>/zip</url>
 	<!-- <format default="json">extension</format> -->
-	<authentication>none</authentication>
+	<authentication>user</authentication>
 </webscript>

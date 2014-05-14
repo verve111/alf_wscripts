@@ -5,19 +5,18 @@
  </head>
  <body>
    <p>
-   <table>
      <form action="zip">
-       <tr><td></td></tr>
-       <tr><td><input type="submit" name="submit" value="Zip entire repo"></td></tr>
+       <fieldset style="width:400px;">
+         <legend>Zip Entire Repository</legend>
+         <input type="submit" name="submit" value="Zip">
+       </fieldset>
      </form>
-   </table>
    <p>
-   <table>
-     <form action="${url.service}" method="post" enctype="multipart/form-data" accept-charset="utf-8">
-       <tr><td></td></tr>
-       <tr><td>File: <input type="file" name="file"></td></tr>
-       <tr><td><input type="submit" name="submit" value="Unzip (to /companyName/tmp/)"></td></tr>
-     </form>
-   </table>
+     <form action="unzip" method="post" enctype="multipart/form-data" accept-charset="utf-8">
+       <fieldset style="width:400px;">
+         <legend>Unzip archive to "/companyName/tmp/")</legend>
+       	 Choose archive: <input type="file" name="file"><br>
+         <input type="submit" name="submit" value="Unzip">
+       </fieldset>     
  </body>
 </html>

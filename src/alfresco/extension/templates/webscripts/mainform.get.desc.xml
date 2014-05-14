@@ -2,5 +2,5 @@
   <shortname>Main form</shortname>
   <description>Form for zip/unzip content and folders</description>
   <url>/mainform</url>
-  <authentication>none</authentication>
+  <authentication>user</authentication>
 </webscript>
