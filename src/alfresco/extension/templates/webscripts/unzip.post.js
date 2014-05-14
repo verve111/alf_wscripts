@@ -25,7 +25,7 @@ if (filename == undefined || content == undefined || filename == "") {
 	  
 	upload.properties.content.write(content);
 	upload.properties.content.setEncoding("UTF-8");
-	upload.properties.content.guessMimetype(filename);
+	upload.properties.content.setMimetype("application/zip");
 	  
 	upload.properties.title = "title";
 	upload.properties.description = "description";
