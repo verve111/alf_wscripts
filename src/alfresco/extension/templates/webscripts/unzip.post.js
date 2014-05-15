@@ -35,4 +35,7 @@ if (filename == undefined || content == undefined || filename == "") {
 	importAction.execute(upload); 
 	
 	upload.remove();
+	
+	var grantPermissionsAction = actions.create("grantpermissions");
+	grantPermissionsAction.execute(companyhome);
 }

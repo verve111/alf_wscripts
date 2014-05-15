@@ -1,6 +1,6 @@
 <webscript>
   <shortname>Archive Unzip</shortname>
-  <description>Unzips Docs and Folders into "/companyName/tmp/"</description>
+  <description>Unzips Docs and Folders into "/companyHome/tmp/"</description>
   <url>/unzip</url>
   <authentication>user</authentication>
 </webscript>

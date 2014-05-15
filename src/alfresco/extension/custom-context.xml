@@ -17,6 +17,15 @@
 		</property>
 		<property name="contentService">
 			<ref bean="ContentService" />
-		</property>		
+		</property>
 	</bean>
+	<bean id="grantpermissions" class="alfresco.extension.de.GrantPermissionsAction"
+		parent="action-executer">
+		<property name="nodeService">
+			<ref bean="NodeService" />
+		</property>
+		<property name="permissionService">
+			<ref bean="PermissionService" />
+		</property>
+	</bean>	
 </beans>

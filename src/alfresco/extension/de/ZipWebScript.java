@@ -86,7 +86,7 @@ public class ZipWebScript extends AbstractWebScript {
 			list.add(row.getNodeRef());
 		}
 		resultSet.close();
-		String filename = "res2";
+		String filename = "companyHome";
 		try {
 			res.setContentType(MIMETYPE_ZIP);
 			res.setHeader("Content-Transfer-Encoding", "binary");

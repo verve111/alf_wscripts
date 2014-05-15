@@ -1,4 +1,3 @@
 {
-"total": true,
-"success" : true
+	"success" : true
 }
