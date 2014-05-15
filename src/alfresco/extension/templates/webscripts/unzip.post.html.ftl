@@ -10,7 +10,7 @@
        <td><nobr>Unzip Web Script Result</nobr></td>
      </tr>
      <tr><td></td></tr>
-     <tr><td>Uploaded <a href="${url.serviceContext}/sample/folder${upload.displayPath}">${upload.name}</a> of size ${upload.properties.content.size}.</td></tr>
+     <tr><td>Unzipped to "companyHome/tmp".</td></tr>
    </table>
  </body>
 </html>

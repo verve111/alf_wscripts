@@ -3,7 +3,6 @@ var content = null;
 var title = "";
 var description = "";
 
-// locate attributes
 for each (field in formdata.fields) {
 	if (field.name == "file" && field.isFile) {
 		filename = field.filename;
@@ -35,8 +34,5 @@ if (filename == undefined || content == undefined || filename == "") {
 	importAction.parameters.destination = tmpFolder;
 	importAction.execute(upload); 
 	
-	// setup model for response template
-	model.upload = upload;
-	
-	//upload.remove();
+	upload.remove();
 }

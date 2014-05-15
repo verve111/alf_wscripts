@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.zip.Deflater;
-import java.util.zip.ZipEntry;
 
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.security.authentication.AuthenticationUtil;
@@ -25,6 +24,7 @@ import org.alfresco.service.cmr.repository.StoreRef;
 import org.alfresco.service.cmr.search.ResultSet;
 import org.alfresco.service.cmr.search.ResultSetRow;
 import org.alfresco.service.cmr.search.SearchService;
+import org.alfresco.service.cmr.security.AccessPermission;
 import org.alfresco.service.cmr.security.PermissionService;
 import org.alfresco.service.namespace.QName;
 import org.alfresco.util.TempFileProvider;
@@ -41,6 +41,8 @@ public class ZipWebScript extends AbstractWebScript {
 	private PermissionService permissionService;
 	private DictionaryService dictionaryService;
 	private ContentService contentService;
+	
+	private List<String> permissionsList = null;
 
 	private StoreRef storeRef = new StoreRef(StoreRef.PROTOCOL_WORKSPACE, "SpacesStore");
 
@@ -77,13 +79,14 @@ public class ZipWebScript extends AbstractWebScript {
 	@Override
 	public void execute(WebScriptRequest req, WebScriptResponse res) throws IOException {
 		AuthenticationUtil.setAdminUserAsFullyAuthenticatedUser();
+		permissionsList = new ArrayList<String>();
 		ResultSet resultSet = searchService.query(storeRef, SearchService.LANGUAGE_LUCENE, "PATH:\"/app:company_home/*\" AND TYPE:\"cm:folder\"");
 		List<NodeRef> list = new ArrayList<NodeRef>();
 		for (ResultSetRow row : resultSet) {
 			list.add(row.getNodeRef());
 		}
 		resultSet.close();
-		String filename = "res";
+		String filename = "res2";
 		try {
 			res.setContentType(MIMETYPE_ZIP);
 			res.setHeader("Content-Transfer-Encoding", "binary");
@@ -107,11 +110,12 @@ public class ZipWebScript extends AbstractWebScript {
 				ZipArchiveOutputStream out = new ZipArchiveOutputStream(buff);
 				// out.setEncoding(encoding);
 				out.setMethod(ZipArchiveOutputStream.DEFLATED);
-				out.setLevel(Deflater.DEFLATED);
+				out.setLevel(Deflater.BEST_SPEED);
 				try {
 					for (NodeRef nr : nodeRefs) {
 						addToZip(nr, out, "");
 					}
+					createPermissionsFile(out);
 				} catch (Exception e) {
 					e.printStackTrace();
 				} finally {
@@ -140,6 +144,31 @@ public class ZipWebScript extends AbstractWebScript {
 			}
 		}
 	}
+	
+	private void storePermission(String path, NodeRef node) {
+		String s = "";
+		for (AccessPermission ap : permissionService.getAllSetPermissions(node)) {
+			s += ap.getAccessStatus() + "," + ap.getAuthority()
+					+ "," + ap.getAuthorityType() + "," + ap.getPermission()
+					+ "," + ap.getPosition() + ";";
+		}
+		if (s.isEmpty()) {
+			System.out.println("WARN: no permits found for node : " + node);
+		}
+		s = path + "=" + s;
+		permissionsList.add(s.endsWith(";") ? s.substring(0, s.length() - 1) : s);		
+	}
+	
+	private void createPermissionsFile(ZipArchiveOutputStream out) throws IOException {
+		ZipArchiveEntry entry = new ZipArchiveEntry("permissions.txt");
+		entry.setTime((new Date()).getTime());
+		// entry.setSize(reader.getSize());
+		out.putArchiveEntry(entry);
+		for (String perm : permissionsList) {
+			out.write(perm.concat(System.getProperty("line.separator")).getBytes());
+		}
+		out.closeArchiveEntry();
+	}
 
 	public void addToZip(NodeRef node, ZipArchiveOutputStream out, String path) throws IOException {
 		QName nodeQnameType = this.nodeService.getType(node);
@@ -149,6 +178,7 @@ public class ZipWebScript extends AbstractWebScript {
 			if (reader != null) {
 				InputStream is = reader.getContentInputStream();
 				String filename = path.isEmpty() ? nodeName : path + '/' + nodeName;
+				storePermission(filename, node);
 				ZipArchiveEntry entry = new ZipArchiveEntry(filename);
 				entry.setTime(((Date) nodeService.getProperty(node, ContentModel.PROP_MODIFIED)).getTime());
 				entry.setSize(reader.getSize());
@@ -173,9 +203,8 @@ public class ZipWebScript extends AbstractWebScript {
 			List<ChildAssociationRef> children = nodeService.getChildAssocs(node);
 			if (children.isEmpty()) {
 				String folderPath = path.isEmpty() ? nodeName + '/' : path + '/' + nodeName + '/';
-				ZipEntry ze = new ZipEntry(folderPath);
-				ze.setMethod(ZipArchiveOutputStream.DEFLATED);
-				out.putArchiveEntry(new ZipArchiveEntry(ze));
+				storePermission(folderPath, node);
+				out.putArchiveEntry(new ZipArchiveEntry(folderPath));
 				out.closeArchiveEntry();
 			} else {
 				for (ChildAssociationRef childAssoc : children) {
