@@ -148,15 +148,15 @@ public class ZipWebScript extends AbstractWebScript {
 	private void storePermission(String path, NodeRef node) {
 		String s = "";
 		for (AccessPermission ap : permissionService.getAllSetPermissions(node)) {
-			s += ap.getAccessStatus() + "," + ap.getAuthority()
-					+ "," + ap.getAuthorityType() + "," + ap.getPermission()
-					+ "," + ap.getPosition() + ";";
+			s += ap.getAccessStatus() + "%,%" + ap.getAuthority()
+					+ "%,%" + ap.getAuthorityType() + "%,%" + ap.getPermission()
+					+ "%,%" + ap.getPosition() + "%;%";
 		}
 		if (s.isEmpty()) {
 			System.out.println("WARN: no permits found for node : " + node);
 		}
-		s = path + "=" + s;
-		permissionsList.add(s.endsWith(";") ? s.substring(0, s.length() - 1) : s);		
+		s = path + "%=%" + s;
+		permissionsList.add(s.endsWith("%;%") ? s.substring(0, s.length() - 3) : s);		
 	}
 	
 	private void createPermissionsFile(ZipArchiveOutputStream out) throws IOException {

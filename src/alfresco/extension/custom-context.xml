@@ -27,5 +27,8 @@
 		<property name="permissionService">
 			<ref bean="PermissionService" />
 		</property>
+		<property name="contentService">
+			<ref bean="ContentService" />
+		</property>		
 	</bean>	
 </beans>
