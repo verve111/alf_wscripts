@@ -29,6 +29,9 @@
 		</property>
 		<property name="contentService">
 			<ref bean="ContentService" />
+		</property>
+		<property name="searchService">
+			<ref bean="SearchService" />
 		</property>		
 	</bean>	
 </beans>

@@ -17,6 +17,7 @@
          <legend>Unzip archive to "/companyHome/tmp/")</legend>
        	 Choose archive: <input type="file" name="file"><br>
          <input type="submit" name="submit" value="Unzip">
-       </fieldset>     
+       </fieldset>
+     </form>     
  </body>
 </html>

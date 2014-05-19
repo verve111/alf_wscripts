@@ -17,10 +17,11 @@ if (filename == undefined || content == undefined || filename == "") {
   
 } else {
 	var tmpFolder = companyhome.childByNamePath("tmp");	
-	if (tmpFolder == null) {
-		var tmpFolder = companyhome.createFolder("tmp");
+	if (tmpFolder != null) {
+		tmpFolder.remove();
 	}
-	/*upload = tmpFolder.createFile(filename) ;
+	tmpFolder = companyhome.createFolder("tmp");
+	upload = tmpFolder.createFile(filename);
 	  
 	upload.properties.content.write(content);
 	upload.properties.content.setEncoding("UTF-8");
@@ -34,7 +35,7 @@ if (filename == undefined || content == undefined || filename == "") {
 	importAction.parameters.destination = tmpFolder;
 	importAction.execute(upload); 
 	
-	upload.remove();*/
+	upload.remove();
 	
 	var grantPermissionsAction = actions.create("grantpermissions");
 	grantPermissionsAction.execute(tmpFolder);
