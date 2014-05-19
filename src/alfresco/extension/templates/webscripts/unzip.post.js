@@ -12,16 +12,16 @@ for each (field in formdata.fields) {
 
 if (filename == undefined || content == undefined || filename == "") {
 	status.code = 400;
-	status.message = "Uploaded archive cannot be located in request. Please specify the archive path.";
+	status.message = "Please select the archive (Uploaded archive cannot be located in request).";
 	status.redirect = true;
   
 } else {
-	var tmpFolder = companyhome.childByNamePath("tmp");	
+	/*var tmpFolder = companyhome.childByNamePath("tmp");	
 	if (tmpFolder != null) {
 		tmpFolder.remove();
 	}
-	tmpFolder = companyhome.createFolder("tmp");
-	upload = tmpFolder.createFile(filename);
+	tmpFolder = companyhome.createFolder("tmp");*/
+	upload = companyhome.createFile(filename);
 	  
 	upload.properties.content.write(content);
 	upload.properties.content.setEncoding("UTF-8");
@@ -31,12 +31,12 @@ if (filename == undefined || content == undefined || filename == "") {
 	upload.properties.description = "description";
 	upload.save();
 
-	var importAction = actions.create("import");
+	/*var importAction = actions.create("import");
 	importAction.parameters.destination = tmpFolder;
 	importAction.execute(upload); 
 	
-	upload.remove();
+	upload.remove();*/
 	
 	var grantPermissionsAction = actions.create("grantpermissions");
-	grantPermissionsAction.execute(tmpFolder);
+	grantPermissionsAction.execute(upload);
 }

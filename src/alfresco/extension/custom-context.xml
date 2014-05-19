@@ -32,6 +32,13 @@
 		</property>
 		<property name="searchService">
 			<ref bean="SearchService" />
-		</property>		
+		</property>
+		<property name="actionService">
+			<ref bean="ActionService" />
+		</property>
+		<property name="fileFolderService">
+			<ref bean="FileFolderService" />
+		</property>
+		<property name="repository" ref="repositoryHelper"/>								
 	</bean>	
 </beans>
