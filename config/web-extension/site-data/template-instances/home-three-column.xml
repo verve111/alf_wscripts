@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<template-instance>
-   <template-type>de/wflist/home</template-type>
-   <properties>
-   		<pageFamily>home</pageFamily>
-   		<container>home</container>
-   </properties>
-</template-instance>

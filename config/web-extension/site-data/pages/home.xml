@@ -1,9 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<page>
-   <title>Workflow List Page</title>
-   <title-id>page.wflist.title</title-id>
-   <description>Workflow List Page</description>
-   <description-id>page.wflist.description</description-id>
-   <template-instance>home-three-column</template-instance>
-   <authentication>none</authentication>
-</page>
