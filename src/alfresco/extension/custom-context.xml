@@ -56,7 +56,6 @@
 	<bean id="simpleTrigger" class="org.springframework.scheduling.quartz.SimpleTriggerBean"> 
 		<property name="jobDetail" ref="packDirsJob" />
 		<property name="repeatInterval" value="60000" />
-		<!-- 3 minutes -->
 		<property name="startDelay" value="120000" />
  	</bean>
 	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
