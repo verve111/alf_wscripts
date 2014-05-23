@@ -6,18 +6,22 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.zip.Deflater;
 
 import org.alfresco.model.ContentModel;
+import org.alfresco.repo.content.MimetypeMap;
+import org.alfresco.repo.model.Repository;
 import org.alfresco.repo.security.authentication.AuthenticationUtil;
 import org.alfresco.service.cmr.dictionary.DictionaryService;
+import org.alfresco.service.cmr.model.FileFolderService;
 import org.alfresco.service.cmr.repository.ChildAssociationRef;
 import org.alfresco.service.cmr.repository.ContentReader;
 import org.alfresco.service.cmr.repository.ContentService;
+import org.alfresco.service.cmr.repository.ContentWriter;
 import org.alfresco.service.cmr.repository.NodeRef;
 import org.alfresco.service.cmr.repository.NodeService;
 import org.alfresco.service.cmr.repository.StoreRef;
@@ -41,6 +45,8 @@ public class ZipWebScript extends AbstractWebScript {
 	private PermissionService permissionService;
 	private DictionaryService dictionaryService;
 	private ContentService contentService;
+	private FileFolderService fileFolderService;
+	private boolean isYearZipper;	
 	
 	private List<String> permissionsList = null;
 
@@ -48,10 +54,15 @@ public class ZipWebScript extends AbstractWebScript {
 
 	private static final int BUFFER_SIZE = 1024;
 
-	private static final String MIMETYPE_ZIP = "application/zip";
 	private static final String TEMP_FILE_PREFIX = "alf";
 	private static final String ZIP_EXTENSION = ".zip";
 
+	private Repository repository;
+	
+	public void setRepository(Repository repository) {
+	    this.repository = repository;
+	}
+	
 	public void setContentService(ContentService contentService) {
 		this.contentService = contentService;
 	}
@@ -71,6 +82,10 @@ public class ZipWebScript extends AbstractWebScript {
 	public void setSearchService(SearchService searchService) {
 		this.searchService = searchService;
 	}
+	
+	public void setFileFolderService(FileFolderService fileFolderService) {
+		this.fileFolderService = fileFolderService;
+	}	
 
 	public ZipWebScript() {
 		super();
@@ -78,71 +93,103 @@ public class ZipWebScript extends AbstractWebScript {
 
 	@Override
 	public void execute(WebScriptRequest req, WebScriptResponse res) throws IOException {
+		String folderToSearch = req.getParameter("folderToSearch");
+		isYearZipper = folderToSearch != null && !folderToSearch.isEmpty();
 		AuthenticationUtil.setAdminUserAsFullyAuthenticatedUser();
 		permissionsList = new ArrayList<String>();
-		ResultSet resultSet = searchService.query(storeRef, SearchService.LANGUAGE_LUCENE, "PATH:\"/app:company_home/*\" AND TYPE:\"cm:folder\"");
+		ResultSet resultSet = !isYearZipper ? searchService.query(storeRef, SearchService.LANGUAGE_LUCENE,
+				"PATH:\"/app:company_home/*\" AND TYPE:\"cm:folder\"") : searchService.query(storeRef, SearchService.LANGUAGE_LUCENE,
+				MessageFormat.format("PATH:\"/app:company_home//*\" AND TYPE:\"cm:folder\" AND @cm\\:name:\"{0}\"", folderToSearch));
 		List<NodeRef> list = new ArrayList<NodeRef>();
 		for (ResultSetRow row : resultSet) {
 			list.add(row.getNodeRef());
 		}
 		resultSet.close();
-		String filename = "companyHome";
-		try {
-			res.setContentType(MIMETYPE_ZIP);
-			res.setHeader("Content-Transfer-Encoding", "binary");
-			res.addHeader("Content-Disposition", "attachment;filename=\"" + filename + ZIP_EXTENSION + "\"");
-			res.setHeader("Cache-Control", "must-revalidate, post-check=0, pre-check=0");
-			res.setHeader("Pragma", "public");
-			res.setHeader("Expires", "0");
-			createZipFile(list, res.getOutputStream());
-		} catch (RuntimeException e) {
-			e.printStackTrace();
+		if (list.size() > 0) {
+			File zip = null;
+			try {
+				zip = createZipFile(list);
+				if (!isYearZipper) {
+					String zippedFilename = "companyHome";
+					res.setContentType(MimetypeMap.MIMETYPE_ZIP);
+					res.setHeader("Content-Transfer-Encoding", "binary");
+					res.addHeader("Content-Disposition", "attachment;filename=\"" + zippedFilename + ZIP_EXTENSION + "\"");
+					res.setHeader("Cache-Control", "must-revalidate, post-check=0, pre-check=0");
+					res.setHeader("Pragma", "public");
+					res.setHeader("Expires", "0");
+					InputStream in = new FileInputStream(zip);
+					try {
+						byte[] buffer = new byte[BUFFER_SIZE];
+						int len;
+						while ((len = in.read(buffer)) > 0) {
+							res.getOutputStream().write(buffer, 0, len);
+						}
+					} finally {
+						in.close();
+					}
+				} else {
+					NodeRef zipNode = createYearZip("YearZipper_" + folderToSearch + ".zip");
+					ContentWriter writer = contentService.getWriter(zipNode, ContentModel.PROP_CONTENT, true);
+					writer.setMimetype(MimetypeMap.MIMETYPE_ZIP);
+					writer.setEncoding("UTF-8");
+					InputStream in = new FileInputStream(zip);
+					writer.putContent(in);
+					in.close();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				if (zip != null) {
+					zip.delete();
+				}
+			}
 		}
 	}
 
-	public void createZipFile(List<NodeRef> nodeRefs, OutputStream os) throws IOException {
+	private NodeRef createYearZip(String zippedFilename) {
+		NodeRef res = null;
+		// remove app:company_home/cm:tmp directory
+		ResultSet resultSet = searchService.query(new StoreRef(StoreRef.PROTOCOL_WORKSPACE, "SpacesStore"), SearchService.LANGUAGE_LUCENE,
+				MessageFormat.format("PATH:\"/app:company_home/*\" AND TYPE:\"cm:content\" AND @cm\\:name:\"{0}\"", zippedFilename));
+		for (ResultSetRow row : resultSet) {
+			nodeService.deleteNode(row.getNodeRef());
+			break;
+		}
+		resultSet.close();
+		// create app:company_home/cm:tmp directory
+		res = fileFolderService.create(repository.getCompanyHome(), zippedFilename, ContentModel.TYPE_CONTENT).getNodeRef();
+		return res;
+	}
+	
+	public File createZipFile(List<NodeRef> nodeRefs) throws IOException {
 		File zip = null;
 		try {
-			if (nodeRefs.size() > 0) {
-				zip = TempFileProvider.createTempFile(TEMP_FILE_PREFIX, ZIP_EXTENSION);
-				FileOutputStream stream = new FileOutputStream(zip);
-				BufferedOutputStream buff = new BufferedOutputStream(stream);
-				ZipArchiveOutputStream out = new ZipArchiveOutputStream(buff);
-				// out.setEncoding(encoding);
-				out.setMethod(ZipArchiveOutputStream.DEFLATED);
-				out.setLevel(Deflater.BEST_SPEED);
-				try {
-					for (NodeRef nr : nodeRefs) {
-						addToZip(nr, out, "");
-					}
-					createPermissionsFile(out);
-				} catch (Exception e) {
-					e.printStackTrace();
-				} finally {
-					out.close();
-					buff.close();
-					stream.close();
-					if (nodeRefs.size() > 0) {
-						InputStream in = new FileInputStream(zip);
-						try {
-							byte[] buffer = new byte[BUFFER_SIZE];
-							int len;
-							while ((len = in.read(buffer)) > 0) {
-								os.write(buffer, 0, len);
-							}
-						} finally {
-							in.close();
-						}
-					}
+			zip = TempFileProvider.createTempFile(TEMP_FILE_PREFIX, ZIP_EXTENSION);
+			FileOutputStream stream = new FileOutputStream(zip);
+			BufferedOutputStream buff = new BufferedOutputStream(stream);
+			ZipArchiveOutputStream out = new ZipArchiveOutputStream(buff);
+			// out.setEncoding(encoding);
+			out.setMethod(ZipArchiveOutputStream.DEFLATED);
+			out.setLevel(Deflater.BEST_SPEED);
+			try {
+				for (NodeRef nr : nodeRefs) {
+					addToZip(nr, out, "");
 				}
+				if (!isYearZipper) {
+					createPermissionsFile(out);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				out.close();
+				buff.close();
+				stream.close();
+
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-		} finally {
-			if (zip != null) {
-				zip.delete();
-			}
 		}
+		return zip;
 	}
 	
 	private void storePermission(String path, NodeRef node) {

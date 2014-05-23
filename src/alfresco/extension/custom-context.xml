@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!DOCTYPE beans PUBLIC '-//SPRING//DTD BEAN//EN' 'http://www.springframework.org/dtd/spring-beans.dtd'>
 <beans>
-	<bean id="webscript.zip.get" class="alfresco.extension.de.ZipWebScript"
+	<bean id="webscript.zip.post" class="alfresco.extension.de.ZipWebScript"
 		parent="webscript">
 		<property name="nodeService">
 			<ref bean="NodeService" />
@@ -18,6 +18,10 @@
 		<property name="contentService">
 			<ref bean="ContentService" />
 		</property>
+		<property name="fileFolderService">
+			<ref bean="FileFolderService" />
+		</property>
+		<property name="repository" ref="repositoryHelper"/>		
 	</bean>
 	<bean id="grantpermissions" class="alfresco.extension.de.GrantPermissionsAction"
 		parent="action-executer">
@@ -40,5 +44,27 @@
 			<ref bean="FileFolderService" />
 		</property>
 		<property name="repository" ref="repositoryHelper"/>								
+	</bean>
+	<!-- Job stuff -->
+	<bean id="runMeTask" class="alfresco.extension.de.PackDirsTask">
+		<property name="restTemplate" ref="restTemplate" />
+	</bean>
+	<bean id="packDirsJob" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject" ref="runMeTask" />
+		<property name="targetMethod" value="pack" />
 	</bean>	
+	<bean id="simpleTrigger" class="org.springframework.scheduling.quartz.SimpleTriggerBean"> 
+		<property name="jobDetail" ref="packDirsJob" />
+		<property name="repeatInterval" value="60000" />
+		<!-- 3 minutes -->
+		<property name="startDelay" value="120000" />
+ 	</bean>
+	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+ 		<property name="triggers">
+			<list>
+				<ref bean="simpleTrigger" />
+			</list>
+		</property>
+	</bean>
+	<bean id="restTemplate" class="org.springframework.web.client.RestTemplate"/>
 </beans>

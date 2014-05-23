@@ -5,10 +5,10 @@
  </head>
  <body>
    <p>
-     <form action="zip">
+     <form action="zip" method="post">
        <fieldset style="width:400px;">
          <legend>Zip Company Home Space</legend>
-         <input type="submit" name="submit" value="Zip">
+         <input type="submit" name="submit" value="Zip"/>
        </fieldset>
      </form>
    <p>
@@ -16,8 +16,8 @@
        <fieldset style="width:400px;">
          <legend>Unzip archive to "/companyHome/tmp/")</legend>
        	 Choose archive: <input type="file" name="file"><br>
-         <input type="submit" name="submit" value="Unzip">
+         <input type="submit" name="submit" value="Unzip"/>
        </fieldset>
-     </form>     
+     </form>
  </body>
 </html>

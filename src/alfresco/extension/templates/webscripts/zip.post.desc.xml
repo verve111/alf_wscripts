@@ -3,5 +3,5 @@
 	<description>Gets the list of all docs and folders of CompanyHome and zip it</description>
 	<url>/zip</url>
 	<!-- <format default="json">extension</format> -->
-	<authentication>user</authentication>
+	<authentication>none</authentication>
 </webscript>
