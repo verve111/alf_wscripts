@@ -23,10 +23,10 @@ public class PackDirsTask {
 		vars.put("folderToSearch", "2001");
 		try {
 			restTemplate.postForLocation("http://localhost:8080/alfresco/service/zip?folderToSearch={folderToSearch}", null, vars);
+			System.out.println("Year zipper executed successfully");
 		} catch (RestClientException e) {
 			e.printStackTrace();
 		}
-		System.out.println("Year zipper executed successfully");
 	}
 
 }
